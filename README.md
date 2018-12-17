@@ -1,23 +1,35 @@
-This simple SNARK application was made in response to a lightning-dev forum post, https://lists.linuxfoundation.org/pipermail/lightning-dev/2015-November/000309.html where AJ Towns suggested using SNARKs to implement a variant of the lightning protocol. The exact application doesn't matter too much, but in the thread there was an initial attempt at benchmarking, which seemed to suggest ridiculous numbers, like 100+MB for a proof about a single hash. So, this project was made to set the record straight about what performance could be expected.
 
 This is a SNARK implementation using libsnark for the following:
 
-``ZkPoK{ (R1, R2): H1 = sha256(R1) and H2 = sha256(R2) and R1 = R2 ^ X }``
+``ZkPoK{ (R1||S1, R2||S2, R3||S3): Hi = sha256(Ri||Si) and R3 = R1 + R2 }``
 
-Read: given `H1`, `H2`, and `X`, prove you know `R1` and `R2` such that `R1` is the preimage of `H1`,
-`R2` is the preimage of `H2`, and `R1` is `R2 xor X`.
+Read: given public values `H1`, `H2`, `H3`, prove you know secret integers `R1`, `R2`, `R3` and secret 16-byte salt values `S1`, `S2`, `S3` such that the concatenation `R1||S1` is the SHA256 preimage of `H1`, `R2||S2` is the SHA256 preimage of `H2`, `R3||S3` is the preimage of `H3`, and `R3 = R1 + R2`.
+
+This is an implementation and benchmark of the "Receive" zk-SNARK in the Confidential Transaction scheme from this article: <https://media.consensys.net/introduction-to-zksnarks-with-examples-3283b554fc3b>.
+
+Code based on <https://github.com/ebfull/lightning_circuit>.
 
 ## performance
 
-on my computer (Intel(R) Core(TM) i7-3770S CPU @ 3.10GHz):
+on my computer (MacBook Pro Early 2015):
 
-* **key generation time**: 11.6551s
-* **proof generation time**: 3.0884s
-* **verification time**: 0.0262s
+* **key generation time**: 22.1s
+* **proof generation time**: 5.14s
+* **verification time**: 0.1445s
 * **proof size**: 2294 bits
-* **proving key size**: 102284136 bits
+* **proving key size**: 153200114 bits
 * **verifying key size**: 4586 bits
-* **R1CS constraints**: 56101 (mostly sha256-related)
+* **R1CS constraints**: 83766 (mostly sha256-related)
+
+## performance me
+
+on my computer (Deepin CPUi5 2.8*4,Mem 32G):
+
+* **Generate keypair Use Time:36.996031**
+* **Proof Generated Use Time:5.456362**
+* **Proof Verify Use Time:0.028835**
+* **Proof size in bits: 2294**
+
 
 ## howto
 

@@ -28,9 +28,10 @@ template<typename ppzksnark_ppT>
 boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof(r1cs_ppzksnark_proving_key<ppzksnark_ppT> proving_key,
                                                                    const bit_vector &h1,
                                                                    const bit_vector &h2,
-                                                                   const bit_vector &x,
+                                                                   const bit_vector &h3,
                                                                    const bit_vector &r1,
-                                                                   const bit_vector &r2
+                                                                   const bit_vector &r2,
+                                                                   const bit_vector &r3
                                                                    )
 {
     typedef Fr<ppzksnark_ppT> FieldT;
@@ -38,9 +39,10 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof(r1cs_ppzksna
     protoboard<FieldT> pb;
     l_gadget<FieldT> g(pb);
     g.generate_r1cs_constraints();
-    g.generate_r1cs_witness(h1, h2, x, r1, r2);
+    g.generate_r1cs_witness(h1, h2, h3, r1, r2, r3);
 
     if (!pb.is_satisfied()) {
+      std::cout << "System not satisfied!" << std::endl;
         return boost::none;
     }
 
@@ -52,12 +54,15 @@ bool verify_proof(r1cs_ppzksnark_verification_key<ppzksnark_ppT> verification_ke
                   r1cs_ppzksnark_proof<ppzksnark_ppT> proof,
                   const bit_vector &h1,
                   const bit_vector &h2,
-                  const bit_vector &x
+                  const bit_vector &h3
                  )
 {
     typedef Fr<ppzksnark_ppT> FieldT;
 
-    const r1cs_primary_input<FieldT> input = l_input_map<FieldT>(h1, h2, x);
+    const r1cs_primary_input<FieldT> input = l_input_map<FieldT>(h1, h2, h3);
+
+    std::cout << "**** After l_input_map *****" << std::endl;
 
     return r1cs_ppzksnark_verifier_strong_IC<ppzksnark_ppT>(verification_key, input, proof);
+
 }

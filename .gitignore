@@ -1,6 +1,12 @@
 test
 *.o
 *.d
+vk
+pk
+proof
 depinst
 depsrc
 
+.settings/*
+.cproject
+.project
