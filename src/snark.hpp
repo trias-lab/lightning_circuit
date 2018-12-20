@@ -16,7 +16,7 @@ r1cs_ppzksnark_keypair<ppzksnark_ppT> generate_keypair()
 
     protoboard<FieldT> pb;
     l_gadget<FieldT> g(pb);
-    g.generate_r1cs_constraints();
+    g.generate_r1cs_constraints_4keypair();
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
 
     cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << endl;
@@ -31,14 +31,16 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof(r1cs_ppzksna
                                                                    const bit_vector &h3,
                                                                    const bit_vector &r1,
                                                                    const bit_vector &r2,
-                                                                   const bit_vector &r3
+                                                                   const bit_vector &r3,
+																   const int jw[32],
+																   char flag[]
                                                                    )
 {
     typedef Fr<ppzksnark_ppT> FieldT;
 
     protoboard<FieldT> pb;
     l_gadget<FieldT> g(pb);
-    g.generate_r1cs_constraints();
+    g.generate_r1cs_constraints(jw,flag);
     g.generate_r1cs_witness(h1, h2, h3, r1, r2, r3);
 
     if (!pb.is_satisfied()) {

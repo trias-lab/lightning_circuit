@@ -13,10 +13,12 @@ LDLIBS += -L $(DEPINST)/lib -Wl,-rpath $(DEPINST)/lib -L . -lsnark -lgmpxx -lgmp
 LDLIBS += -lboost_system
 
 all:
-	$(CXX) -o test.o src/test.cpp -c $(CXXFLAGS)
-	$(CXX) -o test test.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+	#$(CXX) -o test.o src/test.cpp -c $(CXXFLAGS)
+	#$(CXX) -o test test.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 	
-	#$(CXX) -o libtest.so test.o -shared $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+	$(CXX) -o zktrias.o src/zkTrias/zktrias.cpp -c $(CXXFLAGS)
+	$(CXX) -o zktrias zktrias.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+	#$(CXX) -o libzktrias.so zktrias.o -shared $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
 clean:
 	$(RM) test.o test
