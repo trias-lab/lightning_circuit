@@ -12,13 +12,15 @@ LDLIBS += -L $(DEPINST)/lib -Wl,-rpath $(DEPINST)/lib -L . -lsnark -lgmpxx -lgmp
 # apt-get install libboost-all-dev
 LDLIBS += -lboost_system
 
-all:
-	#$(CXX) -o test.o src/test.cpp -c $(CXXFLAGS)
-	#$(CXX) -o test test.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
-	
+
+test:
+	$(CXX) -o test.o src/test.cpp -c $(CXXFLAGS)
+	$(CXX) -o test test.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+
+zktrias:
 	$(CXX) -o zktrias.o src/zkTrias/zktrias.cpp -c $(CXXFLAGS)
 	$(CXX) -o zktrias zktrias.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 	#$(CXX) -o libzktrias.so zktrias.o -shared $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
 clean:
-	$(RM) test.o test
+	$(RM) test.o test zktrias.o zktrias

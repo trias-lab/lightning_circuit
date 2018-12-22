@@ -11,3 +11,6 @@ depsrc
 .settings/*
 .cproject
 .project
+.idea
+.vscode
+cmake*
