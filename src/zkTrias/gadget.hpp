@@ -1,7 +1,8 @@
 #include "libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp"
 #include "algebra/fields/field_utils.hpp"
+#include "utils.hpp"
 
-const size_t sha256_digest_len = 256;
+//const size_t sha256_digest_len = 256;
 
 /*
 computed by:
@@ -34,32 +35,7 @@ bool sha256_padding[256] = {1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0
                             0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 0,0,0,0,0,0,0,0};
 
 
-
-template<typename FieldT>
-std::vector<FieldT> bv2iv(const bit_vector &v){
-	int l=v.size()/8;
-	std::vector<FieldT> rs;
-	//cout << v.size()<<";"<<l<<endl;
-	//int8_vector rs;
-	int num_i=7;
-	int num=0;
-	for(unsigned i=0;i<v.size();i++){
-
-		if(v[i]){
-			num=num+(1<<num_i);
-		}
-		num_i--;
-
-		if(num_i<0){ //存储int单元并归零
-			//cout<<"Get int8:"<<num<<endl;
-			rs.push_back(num);
-			num_i=7;
-			num=0;
-		}
-	}
-	return rs;
-}
-
+//=======================================================================
 
 template<typename FieldT>
 class l_gadget : public gadget<FieldT> {
@@ -75,6 +51,12 @@ public:
     pb_variable_array<FieldT> intermediate_val3;
     pb_variable_array<FieldT> intermediate_valx;
 
+    pb_variable_array<FieldT> zk_vpub_old;
+    pb_variable_array<FieldT> zk_vpub_new;
+
+    pb_variable_array<FieldT> zk_t1;
+    pb_variable_array<FieldT> zk_t2;
+    pb_variable_array<FieldT> zk_t3;
 
     std::shared_ptr<digest_variable<FieldT>> h1_var; /* H(R1) */
     std::shared_ptr<digest_variable<FieldT>> h2_var; /* H(R2) */
@@ -116,10 +98,14 @@ public:
 
         zero.allocate(this->pb, FMT(this->annotation_prefix, "zero"));
 
-        intermediate_val1.allocate(this->pb, 32, "intermediate_val1");
-        intermediate_val2.allocate(this->pb, 32, "intermediate_val2");
-        intermediate_val3.allocate(this->pb, 32, "intermediate_val3");
-        intermediate_valx.allocate(this->pb, 32, "intermediate_valx");
+        intermediate_val1.allocate(this->pb, sha256_digest_len, "intermediate_val1");
+        intermediate_val2.allocate(this->pb, sha256_digest_len, "intermediate_val2");
+        intermediate_val3.allocate(this->pb, sha256_digest_len, "intermediate_val3");
+        intermediate_valx.allocate(this->pb, sha256_digest_len, "intermediate_valx");
+
+        zk_t1.allocate(this->pb, sha256_digest_len, "zk_t1");
+        zk_t2.allocate(this->pb, sha256_digest_len, "zk_t2");
+        zk_t3.allocate(this->pb, sha256_digest_len, "zk_t3");
 
 
         // SHA256's length padding
@@ -197,7 +183,7 @@ public:
 
     }
 
-    void generate_r1cs_constraints(const int jw[])
+    void generate_r1cs_constraints()//const int jw[])
     {
         // Multipacking constraints (for input validation)
         unpack_inputs->generate_r1cs_constraints(true);
@@ -210,7 +196,60 @@ public:
 
         generate_r1cs_equals_const_constraint<FieldT>(this->pb, zero, FieldT::zero(), "zero");
 
+        //后期需要验证r1cs_constraint 约束是否支持负数计算约束
+        /*
+         * 经验证，约束支持负数计算
+        this->pb.add_r1cs_constraint(
+                r1cs_constraint<FieldT>(
+                        { 300 },
+                        { 1 },
+                        { 100, 100,-100}),
+                FMT(this->annotation_prefix, "finalsum_test_negative", 0));
+        */
 
+        {
+            linear_combination<FieldT> left_side = packed_addition(zk_vpub_old);
+            linear_combination<FieldT> right_side = packed_addition(zk_vpub_new);
+
+            left_side = left_side + packed_addition(intermediate_val1);
+
+            right_side = right_side + packed_addition(intermediate_val2);
+            right_side = right_side + packed_addition(intermediate_val3);
+            right_side = right_side + packed_addition(intermediate_valx);
+
+            // Ensure that both sides are equal
+            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+                    1,
+                    left_side,
+                    right_side
+            ));
+        }
+
+
+        //进行R_i=A_i+R_i+M_i 和 X=AR_1-AR_2-AR_3 的约束检查
+        //当输入的R_i其中的包含负数攻击平衡的金额时，其输入的A_i,R_i,M_i无法通过检查，即不可能在现有约束下提供有效的A_i,R_i,M_i使负数攻击平衡攻击的数据通过
+        {
+            linear_combination<FieldT> left_side_t = packed_addition(zk_vpub_old);
+            linear_combination<FieldT> right_side_t = packed_addition(zk_vpub_new);
+
+            left_side_t = left_side_t + packed_addition(zk_t1);
+
+            right_side_t = right_side_t + packed_addition(zk_t2);
+            right_side_t = right_side_t + packed_addition(zk_t3);
+
+
+            // Ensure that both sides are equal
+            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+                    1,
+                    left_side_t,
+                    right_side_t
+            ));
+        }
+
+        //疑似存在证明数据伪造的可能，其下约束本质不是检查的左右两边数值相等，而是把输入转化为字节数组并结算加法累进位数组之后进行的每字节上的数值平衡检查，
+        //攻击者可能在本地伪造包含负数的加法累进数组使以下约束通过检查但其输入值不必是左右平衡的
+        //解决方案：增加对进位数据的正数约束检查；增加对原始金额数据的正数约束检查
+        /*
         for (unsigned int i = 31; i > 0 ; i--) { //不对最高byte进行检查
             this->pb.add_r1cs_constraint(
                 r1cs_constraint<FieldT>(
@@ -219,6 +258,7 @@ public:
                     { intermediate_val2[i], intermediate_val3[i],intermediate_valx[i],jw[i] }),
                 FMT(this->annotation_prefix, "finalsum_%zu", 0));
         }
+        */
 
         // These are the constraints to ensure the hashes validate.
         h_r1->generate_r1cs_constraints();
@@ -226,47 +266,6 @@ public:
         h_r3->generate_r1cs_constraints();
     }
 
-/*
-    void generate_r1cs_constraints_4keypair(const int jw[32])
-      {
-          // Multipacking constraints (for input validation)
-          unpack_inputs->generate_r1cs_constraints(true);
-
-          // Ensure bitness of the digests. Bitness of the inputs
-          // is established by `unpack_inputs->generate_r1cs_constraints(true)`
-          r1_var->generate_r1cs_constraints();
-          r2_var->generate_r1cs_constraints();
-          r3_var->generate_r1cs_constraints();
-
-          generate_r1cs_equals_const_constraint<FieldT>(this->pb, zero, FieldT::zero(), "zero");
-
-
-          for (unsigned int i = 0; i < 256; i++) {
-              this->pb.add_r1cs_constraint(
-                  r1cs_constraint<FieldT>(
-                      { r2_var->bits[i] * 2 }, // 2*b
-                      { x_var->bits[i] }, // c
-                      { r2_var->bits[i], x_var->bits[i], r1_var->bits[i] * (-1) }), // b+c - a
-                  FMT(this->annotation_prefix, " xor_%zu", i));
-          }
-
-
-          for (unsigned int i = 31; i > 0 ; i--) { //不对最高byte进行检查
-              this->pb.add_r1cs_constraint(
-                  r1cs_constraint<FieldT>(
-                      { intermediate_val1[i]+jw[i-1]*256}, //jw[i]*256 进制平衡
-                      { 1 },
-                      { intermediate_val2[i], intermediate_val3[i],intermediate_valx[i],jw[i]}),
-                  FMT(this->annotation_prefix, "finalsum_%zu", 0));
-          }
-
-
-          // These are the constraints to ensure the hashes validate.
-          h_r1->generate_r1cs_constraints();
-          h_r2->generate_r1cs_constraints();
-          h_r3->generate_r1cs_constraints();
-      }
-*/
 
     void generate_r1cs_witness(const bit_vector &h1,
                                const bit_vector &h2,
@@ -285,11 +284,25 @@ public:
         
         cout<<"start test for bv2iv..."<<endl;
 
-        std::vector<FieldT> iv1= bv2iv<FieldT>(r1);
-        std::vector<FieldT> iv2= bv2iv<FieldT>(r2);
-        std::vector<FieldT> iv3= bv2iv<FieldT>(r3);
-        std::vector<FieldT> ivx= bv2iv<FieldT>(x);
+        std::vector<FieldT> iv1= bv2iv2<FieldT>(r1);
+        std::vector<FieldT> iv2= bv2iv2<FieldT>(r2);
+        std::vector<FieldT> iv3= bv2iv2<FieldT>(r3);
+        std::vector<FieldT> ivx= bv2iv2<FieldT>(x);
 
+        //以下是对R=a+r+m 的计算约束测试，在正常情况下针对每一个R_x参数需要提供对应的a_x,r_x,m_x的数据，通过计算约束其 R_x=a_x+r_x+m_x, X=AR_1-AR2-AR3 ; ar_i=a_i+r_i
+        //以此验证使得输入的m_x只能是正数数，解决可能存在的计算平衡中存在负数平衡的攻击情况
+        int t1[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100};
+        int t2[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50};
+        int t3[32]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,50};
+        std::vector<bool> v_t1= iv2bv(t1);
+        std::vector<bool> v_t2= iv2bv(t2);
+        std::vector<bool> v_t3= iv2bv(t3);
+        std::vector<FieldT> v_iv1= bv2iv2<FieldT>(v_t1);
+        std::vector<FieldT> v_iv2= bv2iv2<FieldT>(v_t2);
+        std::vector<FieldT> v_iv3= bv2iv2<FieldT>(v_t3);
+        zk_t1.fill_with_field_elements(this->pb,v_iv1);
+        zk_t2.fill_with_field_elements(this->pb,v_iv2);
+        zk_t3.fill_with_field_elements(this->pb,v_iv3);
 /*
         cout<< iv1<<endl;
         cout<< iv2<<endl;
@@ -301,6 +314,8 @@ public:
         intermediate_val2.fill_with_field_elements(this->pb, iv2);
         intermediate_val3.fill_with_field_elements(this->pb, iv3);
         intermediate_valx.fill_with_field_elements(this->pb, ivx);
+
+
 
         // Set the zero pb_variable to zero
         this->pb.val(zero) = FieldT::zero();
@@ -318,30 +333,3 @@ public:
 };
 
 
-template<typename FieldT>
-r1cs_primary_input<FieldT> l_input_map(const bit_vector &h1,
-                                       const bit_vector &h2,
-                                       const bit_vector &h3,
-									   const bit_vector &x
-                                       )
-{
-    // Construct the multipacked field points which encode
-    // the verifier's knowledge. This is the "dual" of the
-    // multipacking gadget logic in the constructor.
-    assert(h1.size() == sha256_digest_len);
-    assert(h2.size() == sha256_digest_len);
-    assert(h3.size() == sha256_digest_len);
-    assert(x.size() == sha256_digest_len);
-    std::cout << "**** After assert(size() == sha256_digest_len) *****" << std::endl;
-
-    bit_vector input_as_bits;
-    input_as_bits.insert(input_as_bits.end(), h1.begin(), h1.end());
-    input_as_bits.insert(input_as_bits.end(), h2.begin(), h2.end());
-    input_as_bits.insert(input_as_bits.end(), h3.begin(), h3.end());
-    input_as_bits.insert(input_as_bits.end(), x.begin(), x.end());
-    std::vector<FieldT> input_as_field_elements = pack_bit_vector_into_field_element_vector<FieldT>(input_as_bits);
-
-    std::cout << "**** After pack_bit_vector_into_field_element_vector *****" << std::endl;
-
-    return input_as_field_elements;
-}

@@ -1,5 +1,6 @@
 #include "libsnark/gadgetlib1/gadgets/hashes/sha256/sha256_gadget.hpp"
 #include "algebra/fields/field_utils.hpp"
+#include "utils.hpp"
 
 //Trias 中经转化的计算平衡式为R1=R2+R3+X ，其中R1，R2,R3 都为正数，X可能为负数
 //当X为负时，为简单计算，其平衡式转化为 R1+X=R2+R3 ,并在本类中处理
@@ -17,6 +18,8 @@ public:
     pb_variable_array<FieldT> intermediate_val3;
     pb_variable_array<FieldT> intermediate_valx;
 
+    pb_variable_array<FieldT> zk_vpub_old;
+    pb_variable_array<FieldT> zk_vpub_new;
 
     std::shared_ptr<digest_variable<FieldT>> h1_var; /* H(R1) */
     std::shared_ptr<digest_variable<FieldT>> h2_var; /* H(R2) */
@@ -58,10 +61,10 @@ public:
 
         zero.allocate(this->pb, FMT(this->annotation_prefix, "zero"));
 
-        intermediate_val1.allocate(this->pb, 32, "intermediate_val1");
-        intermediate_val2.allocate(this->pb, 32, "intermediate_val2");
-        intermediate_val3.allocate(this->pb, 32, "intermediate_val3");
-        intermediate_valx.allocate(this->pb, 32, "intermediate_valx");
+        intermediate_val1.allocate(this->pb, sha256_digest_len, "intermediate_val1");
+        intermediate_val2.allocate(this->pb, sha256_digest_len, "intermediate_val2");
+        intermediate_val3.allocate(this->pb, sha256_digest_len, "intermediate_val3");
+        intermediate_valx.allocate(this->pb, sha256_digest_len, "intermediate_valx");
 
 
         // SHA256's length padding
@@ -139,7 +142,7 @@ public:
 
     }
 
-    void generate_r1cs_constraints(const int jw[2][32])
+    void generate_r1cs_constraints()//const int jw[2][32])
     {
         // Multipacking constraints (for input validation)
         unpack_inputs->generate_r1cs_constraints(true);
@@ -153,6 +156,24 @@ public:
         generate_r1cs_equals_const_constraint<FieldT>(this->pb, zero, FieldT::zero(), "zero");
 
 
+        {
+            linear_combination<FieldT> left_side = packed_addition(zk_vpub_old);
+            linear_combination<FieldT> right_side = packed_addition(zk_vpub_new);
+
+            left_side = left_side + packed_addition(intermediate_val1);
+            left_side = left_side + packed_addition(intermediate_valx);
+
+            right_side = right_side + packed_addition(intermediate_val2);
+            right_side = right_side + packed_addition(intermediate_val3);
+
+            // Ensure that both sides are equal
+            this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+                    1,
+                    left_side,
+                    right_side
+            ));
+        }
+        /*
         //R1+x=R2+R3
         for (unsigned int i = 31; i > 0 ; i--) { //不对最高byte进行检查
             this->pb.add_r1cs_constraint(
@@ -162,6 +183,7 @@ public:
                     { intermediate_val2[i],intermediate_val3[i],jw[1][i],jw[0][i-1]*256}),
                 FMT(this->annotation_prefix, "finalsum_%zu", 0));
         }
+         */
 
 
 
@@ -171,25 +193,6 @@ public:
         h_r3->generate_r1cs_constraints();
     }
 
-
-    void generate_r1cs_constraints_4keypair()
-      {
-          // Multipacking constraints (for input validation)
-          unpack_inputs->generate_r1cs_constraints(true);
-
-          // Ensure bitness of the digests. Bitness of the inputs
-          // is established by `unpack_inputs->generate_r1cs_constraints(true)`
-          r1_var->generate_r1cs_constraints();
-          r2_var->generate_r1cs_constraints();
-          r3_var->generate_r1cs_constraints();
-
-          generate_r1cs_equals_const_constraint<FieldT>(this->pb, zero, FieldT::zero(), "zero");
-
-          // These are the constraints to ensure the hashes validate.
-          h_r1->generate_r1cs_constraints();
-          h_r2->generate_r1cs_constraints();
-          h_r3->generate_r1cs_constraints();
-      }
 
     void generate_r1cs_witness(const bit_vector &h1,
                                const bit_vector &h2,
@@ -208,10 +211,10 @@ public:
         
         cout<<"start test for bv2iv..."<<endl;
 
-        std::vector<FieldT> iv1= bv2iv<FieldT>(r1);
-        std::vector<FieldT> iv2= bv2iv<FieldT>(r2);
-        std::vector<FieldT> iv3= bv2iv<FieldT>(r3);
-        std::vector<FieldT> ivx= bv2iv<FieldT>(x);
+        std::vector<FieldT> iv1= bv2iv2<FieldT>(r1);
+        std::vector<FieldT> iv2= bv2iv2<FieldT>(r2);
+        std::vector<FieldT> iv3= bv2iv2<FieldT>(r3);
+        std::vector<FieldT> ivx= bv2iv2<FieldT>(x);
 
         /*
         cout<< iv1<<endl;

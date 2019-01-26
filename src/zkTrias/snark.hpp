@@ -21,7 +21,7 @@ r1cs_ppzksnark_keypair<ppzksnark_ppT> generate_keypair(const int jw[32])
     //如此，当验证端根据对应的验证秘钥验证证明数据为真时，验证者就能够相信对应的交易中是符合预定义的计算约束的，而不是生成假证明以通过检查
     protoboard<FieldT> pb;
     l_gadget<FieldT> g(pb);
-    g.generate_r1cs_constraints(jw);
+    g.generate_r1cs_constraints();
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
 
     cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << endl;
@@ -39,7 +39,7 @@ r1cs_ppzksnark_keypair<ppzksnark_ppT> generate_keypair_neg(const int jw[2][32])
     //如此，当验证端根据对应的验证秘钥验证证明数据为真时，验证者就能够相信对应的交易中是符合预定义的计算约束的，而不是生成假证明以通过检查
     protoboard<FieldT> pb;
     l_gadget_neg<FieldT> g(pb);
-    g.generate_r1cs_constraints(jw);
+    g.generate_r1cs_constraints();
     const r1cs_constraint_system<FieldT> constraint_system = pb.get_constraint_system();
 
     cout << "Number of R1CS constraints: " << constraint_system.num_constraints() << endl;
@@ -63,7 +63,7 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof(r1cs_ppzksna
 
     protoboard<FieldT> pb;
     l_gadget<FieldT> g(pb);
-    g.generate_r1cs_constraints(jw);
+    g.generate_r1cs_constraints();
     g.generate_r1cs_witness(h1, h2, h3, r1, r2, r3,x);
 
     if (!pb.is_satisfied()) {
@@ -90,7 +90,7 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof_neg(r1cs_ppz
 
     protoboard<FieldT> pb;
     l_gadget_neg<FieldT> g(pb);
-    g.generate_r1cs_constraints(jw);
+    g.generate_r1cs_constraints();
     g.generate_r1cs_witness(h1, h2, h3, r1, r2, r3,x);
 
     if (!pb.is_satisfied()) {

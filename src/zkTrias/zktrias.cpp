@@ -7,24 +7,11 @@
 
 #include "snark.hpp"
 #include "zktrias.hpp"
+#include "utils.hpp"
 
 using namespace libsnark;
 using namespace std;
 
-//把byte list 转化成 bit list
-bit_vector iv2bv(int iv[32]){
-	bit_vector rs;
-	for(int i=0;i<32;i++){
-		for(int j=7;j>=0;j--){
-			if((iv[i]&(1<<j))>0){
-				rs.push_back(true);
-			}else{
-				rs.push_back(false);
-			}
-		}
-	}
-	return rs;
-}
 
 //zktrias R1=R2+R3+X   R1+X=R2+R3  X=a1+r1-a2-r2-a3-r3+f
 //trias 应用实践demo
@@ -76,11 +63,13 @@ int main(int argc, char *argv[])
           x_bv = iv2bv(x);
 
           // Constraint is r1=r2+r3+x
+          /*
           int fv=0;
           for(int i=31;i>0;i--){
           	fv=(r2[i]+r3[i]+x[i]+fv)/256;
           	jw[i-1]=fv;
           }
+           */
       }else{
     	  //R1+X=R2+R3
           h1_bv = int_list_to_bits({39,138,11,164,115,142,207,155,162,115,90,128,61,136,218,78,14,163,205,250,61,5,190,154,54,62,43,131,247,199,132,241}, 8);
@@ -98,14 +87,15 @@ int main(int argc, char *argv[])
           x_bv = iv2bv(x);
 
           // Constraint is r1+x=r2+r3
-
+          /*
           int fv0=0,fv1=0;
           for(int i=31;i>0;i--){
           	fv0=(r1[i]+x[i]+fv0)/256;
           	fv1=(r2[i]+r3[i]+fv1)/256;
           	jw_neg[0][i-1]=fv0;
           	jw_neg[1][i-1]=fv1;
-          }
+          }*/
+
       }
 
 
