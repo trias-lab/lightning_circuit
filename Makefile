@@ -27,6 +27,14 @@ lib:
 lib_test:
 	$(CXX) -o libzero_knowledge.o src/lib/lib_zero_knowledge.cpp -c $(CXXFLAGS)
 	$(CXX) -o libzero_knowledge libzero_knowledge.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+	
+libMultiInput:
+	$(CXX) -o libzero_knowledge.o src/libMultiInput/lib_zero_knowledge.cpp -c $(CXXFLAGS)
+	$(CXX) -o libzero_knowledge.so libzero_knowledge.o -shared $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
+
+libMultiInput_test:
+	$(CXX) -o libzero_knowledge.o src/libMultiInput/lib_zero_knowledge.cpp -c $(CXXFLAGS)
+	$(CXX) -o libzero_knowledge libzero_knowledge.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)	
 
 zktrias:
 	$(CXX) -o zktrias.o src/zkTrias/zktrias.cpp -c $(CXXFLAGS)
