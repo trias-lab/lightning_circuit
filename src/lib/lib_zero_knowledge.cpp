@@ -188,6 +188,7 @@ static void bytes_to_hex_str(const unsigned char* source, unsigned char* dest, i
         else
             dest[i * 2 + 1] = low;
     }
+	dest[(source_len-1)*2+1+1] = 0;
     return ;
 }
 
@@ -284,7 +285,7 @@ char *get_prove_data(char *r1, char *r2, char *r3, char *h1, char *h2, char *h3,
 	proofStream << *proof_neg;
 
 	std::string s = proofStream.str();
-	unsigned char *dest = (unsigned char *)malloc( s.length() * 2 );
+	unsigned char *dest = (unsigned char *)malloc( s.length() * 2 + 1 );
 	bytes_to_hex_str((unsigned char *)s.c_str(), dest, s.length());
 	return (char *)dest;
 }
