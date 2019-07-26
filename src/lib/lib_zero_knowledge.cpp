@@ -334,7 +334,7 @@ int is_prove_right(char *h1, char *h2, char *h3, char *x, char *prove_data)
 }
 
 
-#if 1
+#ifdef TEST_LIB
 
 int main(int argc, char *argv[])
 {
