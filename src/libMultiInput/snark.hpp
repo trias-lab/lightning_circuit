@@ -30,15 +30,11 @@ r1cs_ppzksnark_keypair<ppzksnark_ppT> generate_keypair_neg(const int jw[2][32])
 
 template<typename ppzksnark_ppT>
 boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof_neg(r1cs_ppzksnark_proving_key<ppzksnark_ppT> proving_key,
-                                                                   const bit_vector &h1,
-                                                                   const bit_vector &h2,
-                                                                   const bit_vector &h3,
-                                                                   const bit_vector &h4,
-                                                                   const bit_vector &r1,
-                                                                   const bit_vector &r2,
-                                                                   const bit_vector &r3,
-                                                                   const bit_vector &r4,
-																   const bit_vector &x,
+                                                                   const std::vector<bit_vector> &hash_input_vec,
+																	const std::vector<bit_vector> &hash_output_vec,
+																	const std::vector<bit_vector> &input_vec,
+																	const std::vector<bit_vector> &output_vec,
+																	const bit_vector &x,
 																   const int jw[2][32]
                                                                    )
 {
@@ -47,7 +43,7 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof_neg(r1cs_ppz
     protoboard<FieldT> pb;
     l_gadget_neg<FieldT> g(pb);
     g.generate_r1cs_constraints();
-    g.generate_r1cs_witness(h1, h2, h3,h4, r1, r2, r3,r4,x);
+    g.generate_r1cs_witness(hash_input_vec, hash_output_vec, input_vec, output_vec, x);
 
     if (!pb.is_satisfied()) {
       std::cout << "System not satisfied!" << std::endl;
@@ -60,16 +56,14 @@ boost::optional<r1cs_ppzksnark_proof<ppzksnark_ppT>> generate_proof_neg(r1cs_ppz
 template<typename ppzksnark_ppT>
 bool verify_proof(r1cs_ppzksnark_verification_key<ppzksnark_ppT> verification_key,
                   r1cs_ppzksnark_proof<ppzksnark_ppT> proof,
-                  const bit_vector &h1,
-                  const bit_vector &h2,
-                  const bit_vector &h3,
-                  const bit_vector &h4,
+                  const std::vector<bit_vector> &hash_input_vec,
+				  const std::vector<bit_vector> &hash_output_vec,
 				  const bit_vector &x
                  )
 {
     typedef Fr<ppzksnark_ppT> FieldT;
 
-    const r1cs_primary_input<FieldT> input = l_input_map<FieldT>(h1, h2, h3,h4, x);
+    const r1cs_primary_input<FieldT> input = l_input_map<FieldT>(hash_input_vec, hash_output_vec, x);
 
     std::cout << "**** After l_input_map *****" << std::endl;
 

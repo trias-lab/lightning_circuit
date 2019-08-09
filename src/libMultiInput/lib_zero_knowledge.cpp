@@ -14,8 +14,8 @@
 
 
 
-#define CHECK_STR_LEN(p, max, ret) if (strlen(p) > max) return ret;
-
+extern const int MAX_INPUT_NUMBER;
+extern const int MAX_OUTPUT_NUMBER;
 
 
 
@@ -25,14 +25,14 @@ using namespace std;
 static r1cs_ppzksnark_proving_key<default_r1cs_ppzksnark_pp> proving_key;
 static r1cs_ppzksnark_verification_key<default_r1cs_ppzksnark_pp> verifycation_key;
 
-
+/*
 static void write_debug_vector(ofstream& out, vector<bool> &v, const char *prefix)
 {
 	if (strlen(prefix)) {
 		out << prefix << "\n";
 	}
 
-	for(int i=0; i<v.size(); i++) {
+	for(size_t i=0; i<v.size(); i++) {
 		if (v[i]) {
 			out << '1';
 		} else {
@@ -48,6 +48,7 @@ static void write_debug_vector(ofstream& out, vector<bool> &v, const char *prefi
 	out << "\n";
 
 }
+
 
 static void write_debug_array(ofstream& out, int *jw, const char *prefix)
 {
@@ -86,6 +87,7 @@ static void write_debug(vector<bool> &h1_bv, vector<bool> &h2_bv, vector<bool> &
 	
     out.close();
 }
+*/
 
 static bool file_exist (const std::string& name) {
 	ifstream f(name.c_str());
@@ -210,6 +212,7 @@ static void hex_str_to_vector(const char *source, std::vector<bool>& dest)
 
 }
 
+/*
 static char *list_to_str(const std::initializer_list<unsigned char> &list)
 {
 	char *dest = (char *)malloc( list.size()*2 + 1);
@@ -240,48 +243,194 @@ static void set_flag(char *r1, char *r2, int *jw)
     }
 
 }
+*/
 
-//r1 + r4 + x = r2 + r3
-char *get_prove_data(char *r1, char *r2, char *r3, char *r4, char *h1, char *h2, char *h3, char *h4, char *x)
+//return if success
+bool fill_string_vec_from_json(const string& json, const char *key, vector<string>& dest)
 {
-	std::vector<bool> h1_bv(256);
-	std::vector<bool> h2_bv(256);
-	std::vector<bool> h3_bv(256);
-	std::vector<bool> h4_bv(256);
-	std::vector<bool> r1_bv(256);
-	std::vector<bool> r2_bv(256);
-	std::vector<bool> r3_bv(256);
-	std::vector<bool> r4_bv(256);
-	std::vector<bool> x_bv(256);
+	std::string::size_type start;
+	std::string::size_type end;
+	std::string toFind = string("\"") + key + string("\":[") ;
+	start = json.find(toFind);
+	if (start == std::string::npos) {
+		cout << "fill_string_vec_from_json, not find " << toFind << ", " << json << endl;
+		return false;
+	}
+	start += toFind.size();
+	toFind = "]";
+	end = json.find(toFind, start);
+	if (end == std::string::npos) {
+		cout << "fill_string_vec_from_json, not find " << toFind << ", " << json << endl;
+		return false;
+	}
+	std::string s = json.substr(start, end-start);
+	start = 0;
+	while(true) {
+		start = s.find("\"", start);
+		if (start == std::string::npos) {
+			break;
+		}
+		start += 1;
+		end = s.find("\"", start);
+		if (end == std::string::npos) {
+			cout << "fill_string_vec_from_json, not find ending \"" << s << ", " << start << endl;
+			return NULL;
+		}
+		dest.push_back( s.substr(start, end-start) );
+		start = end+1;
+	}
+	return true;
+}
 
+//return if success
+bool get_string_value_from_json(const string& json, const char *key, string& value)
+{
+	std::string::size_type start;
+	std::string::size_type end;
+	std::string toFind = string(key) + "\":\"";
+	start = json.find(toFind);
+	if (start == std::string::npos) {
+		cout << "get_string_value_from_json, not find " << toFind << ", " << json << endl;
+		return false;
+	}
+	start += toFind.size();
+	toFind = "\"";
+	end = json.find(toFind, start);
+	if (start == std::string::npos) {
+		cout << "get_string_value_from_json, not find " << toFind << ", " << json << endl;
+		return false;
+	}
+	std::string s = json.substr(start, end-start);
+	value = s;
+	return true;
+}
+
+
+
+//input + x = output
+/*
+{
+	"input":["a0b0", "a0b0", ...],
+	"output":["a0b0", "a0b0"],
+	"input_hash":["abc", "def", ...],
+	"output_hash":["abc", "def"],
+	"x":"a0b0"
+}
+*/
+char *get_prove_data(const char *jsonReqest)
+{
+	//parse json data
+	std::vector<std::string> inputStringVec;
+	std::vector<std::string> outputStringVec;
+	std::vector<std::string> inputHashStringVec;
+	std::vector<std::string> outputHashStringVec;
+	std::string xString;
+
+	string json(jsonReqest);
+
+	//inputVec
+	bool success;
+	success = fill_string_vec_from_json(json, "input", inputStringVec);
+	if (!success) {
+		return NULL;
+	}
+	success = fill_string_vec_from_json(json, "output", outputStringVec);
+	if (!success) {
+		return NULL;
+	}
+	success = fill_string_vec_from_json(json, "input_hash", inputHashStringVec);
+	if (!success) {
+		return NULL;
+	}
+	success = fill_string_vec_from_json(json, "output_hash", outputHashStringVec);
+	if (!success) {
+		return NULL;
+	}
+	success = get_string_value_from_json(json, "x", xString);
+	if (!success) {
+		return NULL;
+	}
+
+	//check vector count
+	if (inputStringVec.size() != MAX_INPUT_NUMBER ||
+		inputHashStringVec.size() != MAX_INPUT_NUMBER ||
+		outputStringVec.size() != MAX_OUTPUT_NUMBER ||
+		outputHashStringVec.size() != MAX_OUTPUT_NUMBER) 
+	{
+		cout << "vector length not right, " << inputStringVec.size() << "," << inputHashStringVec.size()
+			<< "," << outputStringVec.size() << "," << outputHashStringVec.size();
+		return NULL;
+	}
+
+
+	//check string length
 	const int max_len = (256 / 8) * 2;
-	CHECK_STR_LEN(r1, max_len, NULL);
-	CHECK_STR_LEN(r2, max_len, NULL);
-	CHECK_STR_LEN(r3, max_len, NULL);
-	CHECK_STR_LEN(r4, max_len, NULL);
-	CHECK_STR_LEN(h1, max_len, NULL);
-	CHECK_STR_LEN(h2, max_len, NULL);
-	CHECK_STR_LEN(h3, max_len, NULL);
-	CHECK_STR_LEN(h4, max_len, NULL);
-	CHECK_STR_LEN(x, max_len, NULL);
+	for(size_t i=0; i<inputStringVec.size(); i++) {
+		if (inputStringVec[i].size() > max_len) {
+			return NULL;
+		}
+	}
+	for(size_t i=0; i<outputStringVec.size(); i++) {
+		if (outputStringVec[i].size() > max_len) {
+			return NULL;
+		}
+	}
+	for(size_t i=0; i<inputHashStringVec.size(); i++) {
+		if (inputHashStringVec[i].size() > max_len) {
+			return NULL;
+		}
+	}
+	for(size_t i=0; i<outputHashStringVec.size(); i++) {
+		if (outputHashStringVec[i].size() > max_len) {
+			return NULL;
+		}
+	}
+	if (xString.size() > max_len) {
+		return NULL;
+	}
 
-	hex_str_to_vector(r1, r1_bv);
-	hex_str_to_vector(r2, r2_bv);
-	hex_str_to_vector(r3, r3_bv);
-	hex_str_to_vector(r4, r4_bv);
-	hex_str_to_vector(h1, h1_bv);
-	hex_str_to_vector(h2, h2_bv);
-	hex_str_to_vector(h3, h3_bv);
-	hex_str_to_vector(h4, h4_bv);
-	hex_str_to_vector(x, x_bv);
+	
+	//convert to bit vector
+	std::vector<bit_vector> input_vec;
+	std::vector<bit_vector> output_vec;
+	std::vector<bit_vector> hash_input_vec;
+	std::vector<bit_vector> hash_output_vec;
+	bit_vector x(256);
 
-    int jw_neg[2][32];
+	for(size_t i=0; i<inputStringVec.size(); i++) {
+		const char *p = inputStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		input_vec.push_back( v );
+	}
+	for(size_t i=0; i<outputStringVec.size(); i++) {
+		const char *p = outputStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		output_vec.push_back( v );
+	}
+	for(size_t i=0; i<inputHashStringVec.size(); i++) {
+		const char *p = inputHashStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		hash_input_vec.push_back( v );
+	}
+	for(size_t i=0; i<outputHashStringVec.size(); i++) {
+		const char *p = outputHashStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		hash_output_vec.push_back( v );
+	}
+	hex_str_to_vector(xString.c_str(), x);
+	
+
+	int jw_neg[2][32];
 	//memset((char *)jw, 0, sizeof(jw));
 	//set_flag(r1, r2, jw);
 
 	//write_debug(h1_bv, h2_bv, h3_bv, r1_bv, r2_bv, r3_bv, (int *)jw, "debug_lib.txt");
-
-	auto proof_neg = generate_proof_neg<default_r1cs_ppzksnark_pp>(proving_key, h1_bv, h2_bv, h3_bv, h4_bv, r1_bv, r2_bv, r3_bv, r4_bv, x_bv,jw_neg);
+	
+	auto proof_neg = generate_proof_neg<default_r1cs_ppzksnark_pp>(proving_key, hash_input_vec, hash_output_vec, input_vec, output_vec, x,jw_neg);
 	if (!proof_neg) {
 		return NULL;
 	}
@@ -294,31 +443,93 @@ char *get_prove_data(char *r1, char *r2, char *r3, char *r4, char *h1, char *h2,
 	unsigned char *dest = (unsigned char *)malloc( s.length() * 2 + 1);
 	bytes_to_hex_str((unsigned char *)s.c_str(), dest, s.length());
 	return (char *)dest;
+	
+
 }
 
-
 //if right, return 1. else return 0
-int is_prove_right(char *h1, char *h2, char *h3, char *h4, char *x, char *prove_data)
+/*
 {
-	std::vector<bool> h1_bv(256);
-	std::vector<bool> h2_bv(256);
-	std::vector<bool> h3_bv(256);
-	std::vector<bool> h4_bv(256);
-	std::vector<bool> x_bv(256);
- 
+	"input_hash":["abc", "def", ...],
+	"output_hash":["abc", "def"],
+	"x":"100000",
+	"prove_data":"aefefefe"
+}
+*/
+int is_prove_right(const char *jsonReqest)
+{
+	//parse json data
+	std::vector<std::string> inputHashStringVec;
+	std::vector<std::string> outputHashStringVec;
+	std::string xString;
+	std::string proveDataString;
+
+	string json(jsonReqest);
+
+	//inputVec
+	bool success;
+	success = fill_string_vec_from_json(json, "input_hash", inputHashStringVec);
+	if (!success) {
+		return 0;
+	}
+	success = fill_string_vec_from_json(json, "output_hash", outputHashStringVec);
+	if (!success) {
+		return 0;
+	}
+	success = get_string_value_from_json(json, "x", xString);
+	if (!success) {
+		return 0;
+	}
+	success = get_string_value_from_json(json, "prove_data", proveDataString);
+	if (!success) {
+		return 0;
+	}
+
+	//check vector count
+	if (inputHashStringVec.size() != MAX_INPUT_NUMBER ||
+		outputHashStringVec.size() != MAX_OUTPUT_NUMBER ) 
+	{
+		cout << "vector length not right, "  << inputHashStringVec.size()
+			<< "," << outputHashStringVec.size();
+		return 0;
+	}
+
+	//check string length
 	const int max_len = (256 / 8) * 2;
-	CHECK_STR_LEN(h1, max_len, 0);
-	CHECK_STR_LEN(h2, max_len, 0);
- 	CHECK_STR_LEN(h3, max_len, 0);
-	CHECK_STR_LEN(h4, max_len, 0);
- 	CHECK_STR_LEN(x, max_len, 0);
+	for(size_t i=0; i<inputHashStringVec.size(); i++) {
+		if (inputHashStringVec[i].size() > max_len) {
+			return 0;
+		}
+	}
+	for(size_t i=0; i<outputHashStringVec.size(); i++) {
+		if (outputHashStringVec[i].size() > max_len) {
+			return 0;
+		}
+	}
+	if (xString.size() > max_len) {
+		return 0;
+	}
 
-	hex_str_to_vector(h1, h1_bv);
-	hex_str_to_vector(h2, h2_bv);
-	hex_str_to_vector(h3, h3_bv);
-	hex_str_to_vector(h4, h4_bv);
-	hex_str_to_vector(x, x_bv);
+	//convert to bit vector
+	std::vector<bit_vector> hash_input_vec;
+	std::vector<bit_vector> hash_output_vec;
+	bit_vector x(256);
+	
+	for(size_t i=0; i<inputHashStringVec.size(); i++) {
+		const char *p = inputHashStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		hash_input_vec.push_back( v );
+	}
+	for(size_t i=0; i<outputHashStringVec.size(); i++) {
+		const char *p = outputHashStringVec[i].c_str();
+		bit_vector v(256);
+		hex_str_to_vector(p, v);
+		hash_output_vec.push_back( v );
+	}
+	hex_str_to_vector(xString.c_str(), x);
 
+	const char *prove_data = proveDataString.c_str();
 	r1cs_ppzksnark_proof<default_r1cs_ppzksnark_pp> prove;
 	unsigned char *bytes = (unsigned char *)malloc(strlen(prove_data) / 2);
 	hex_str_to_bytes(prove_data, bytes, strlen(prove_data));
@@ -327,10 +538,9 @@ int is_prove_right(char *h1, char *h2, char *h3, char *h4, char *x, char *prove_
 	stringstream proofStream;
 	proofStream << s;
 	proofStream >> prove;
-	
 
 	int ret;
-	 if(verify_proof(verifycation_key, prove, h1_bv, h2_bv, h3_bv,h4_bv,x_bv)){
+	 if(verify_proof(verifycation_key, prove, hash_input_vec, hash_output_vec, x)){
 	 	ret = 1;
     	cout<<"verify succ neg"<<endl;
      }else{
@@ -342,8 +552,7 @@ int is_prove_right(char *h1, char *h2, char *h3, char *h4, char *x, char *prove_
 	return ret;
 }
 
-
-#if 1
+#if TEST_LIB_MULTI
 
 int main(int argc, char *argv[])
 {
@@ -356,35 +565,17 @@ int main(int argc, char *argv[])
 
 	//gen prove
 	start = clock();
-	char *h1 = list_to_str({188,110,169,119,231,170,91,9,101,147,123,65,195,199,83,205,119,191,200,51,107,18,21,102,159,118,43,38,248,42,32,163});
-	char *h2 = list_to_str({52,127,254,38,120,94,13,23,42,251,188,120,234,37,252,223,97,206,31,129,134,177,111,194,48,151,135,18,3,233,164,0});
-	char *h3 = list_to_str({99,179,210,199,151,21,86,200,78,95,162,27,113,120,34,91,98,245,232,157,138,48,158,207,140,199,145,155,211,253,98,255});
-	char *h4 = list_to_str({254,137,29,37,40,251,121,186,67,14,95,64,26,12,234,152,52,122,149,92,164,204,72,100,152,56,242,234,54,96,93,216});
-	printf("h1=%s\n", h1);
-	printf("h2=%s\n", h2);
-	printf("h3=%s\n", h3);
-	printf("h4=%s\n", h4);
-
-	char *r1 = list_to_str({0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,13,224,182,179,167,100,0,0});
-	char *r2 = list_to_str({0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,69,99,145,130,68,244,0,0});
-	char *r3 = list_to_str({0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,83,68,72,53,236,88,0,0});
-	char *r4 = list_to_str({0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,27,193,109,103,78,200,0,0});
-	char *x = list_to_str({0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,111,5,181,157,59,32,0,0});
-	printf("r1=%s\n", r1);
-	printf("r2=%s\n", r2);
-	printf("r3=%s\n", r3);
-	printf("r4=%s\n", r4);
-	printf("x=%s\n", x);
-
-	char *prove = get_prove_data(r1, r2, r3, r4, h1, h2, h3, h4, x);
+	const char *req = "{\"input\":[\"0000000000000000000000000000000000000000000000000000000000000001\",\"0000000000000000000000000000000000000000000000000000000000000002\",\"0000000000000000000000000000000000000000000000000000000000000003\",\"0000000000000000000000000000000000000000000000000000000000000004\",\"0000000000000000000000000000000000000000000000000000000000000005\",\"0000000000000000000000000000000000000000000000000000000000000006\",\"0000000000000000000000000000000000000000000000000000000000000007\",\"0000000000000000000000000000000000000000000000000000000000000008\",\"0000000000000000000000000000000000000000000000000000000000000009\",\"000000000000000000000000000000000000000000000000000000000000000a\"],\"output\":[\"0000000000000000000000000000000000000000000000000000000000000014\",\"0000000000000000000000000000000000000000000000000000000000000028\"],\"input_hash\":[\"ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5\",\"9267d3dbed802941483f1afa2a6bc68de5f653128aca9bf1461c5d0a3ad36ed2\",\"d9147961436944f43cd99d28b2bbddbf452ef872b30c8279e255e7daafc7f946\",\"e38990d0c7fc009880a9c07c23842e886c6bbdc964ce6bdd5817ad357335ee6f\",\"96de8fc8c256fa1e1556d41af431cace7dca68707c78dd88c3acab8b17164c47\",\"d1ec675902ef1633427ca360b290b0b3045a0d9058ddb5e648b4c3c3224c5c68\",\"48428bdb7ddd829410d6bbb924fdeb3a3d7e88c2577bffae073b990c6f061d08\",\"38df1c1f64a24a77b23393bca50dff872e31edc4f3b5aa3b90ad0b82f4f089b6\",\"887bf140ce0b6a497ed8db5c7498a45454f0b2bd644b0313f7a82acc084d0027\",\"81b04ae4944e1704a65bc3a57b6fc3b06a6b923e3c558d611f6a854b5539ec13\"],\"output_hash\":[\"4d68bf921d7fcf9f99a27e28f59b875c234193f9c330403dcf29f1872be57ccd\",\"1391854aca800961b604acd16f59e5ec4fd025a2fb0eb9ae166976bc2d42cb3c\"],\"x\":\"0000000000000000000000000000000000000000000000000000000000000005\"}";
+	char *prove = get_prove_data(req);
 	printf("prove=%s\n", prove);
 	dur = (double)(clock() - start);
     printf("Generate proof Use Time:%f\n\n",(dur/CLOCKS_PER_SEC));
 
+
 	//verify prove
 	start = clock();
-	int is_right = is_prove_right(h1, h2, h3, h4, x, prove);
-	//int is_right = is_prove_right(h1, h3, h2, prove);
+	req = "{\"input_hash\":[\"ec4916dd28fc4c10d78e287ca5d9cc51ee1ae73cbfde08c6b37324cbfaac8bc5\",\"9267d3dbed802941483f1afa2a6bc68de5f653128aca9bf1461c5d0a3ad36ed2\",\"d9147961436944f43cd99d28b2bbddbf452ef872b30c8279e255e7daafc7f946\",\"e38990d0c7fc009880a9c07c23842e886c6bbdc964ce6bdd5817ad357335ee6f\",\"96de8fc8c256fa1e1556d41af431cace7dca68707c78dd88c3acab8b17164c47\",\"d1ec675902ef1633427ca360b290b0b3045a0d9058ddb5e648b4c3c3224c5c68\",\"48428bdb7ddd829410d6bbb924fdeb3a3d7e88c2577bffae073b990c6f061d08\",\"38df1c1f64a24a77b23393bca50dff872e31edc4f3b5aa3b90ad0b82f4f089b6\",\"887bf140ce0b6a497ed8db5c7498a45454f0b2bd644b0313f7a82acc084d0027\",\"81b04ae4944e1704a65bc3a57b6fc3b06a6b923e3c558d611f6a854b5539ec13\"],\"output_hash\":[\"4d68bf921d7fcf9f99a27e28f59b875c234193f9c330403dcf29f1872be57ccd\",\"1391854aca800961b604acd16f59e5ec4fd025a2fb0eb9ae166976bc2d42cb3c\"],\"x\":\"0000000000000000000000000000000000000000000000000000000000000005\",\"prove_data\":\"3020313039303236373633333732393030313030383038323037383036303739303039323932393036363236373635353230303430343630333839383034333636383031333735353639363730363420312030203630393635383334323235373938353034393931333737393130303334353433393731313037383036303034353133333235333738313137303233393539323632353930313331393631333920310A30203230333334343834343132313137313031393236383637313336393238313132373430383831343930313334343435363631333536383638363931323031383138323037303933353035373520373834333931323930333538383330313530303734343037383539353631333436313531343538353034373538343634313135303438383239383230333737373931383134333938393837312030203020313136383231353538373231393137373934383736303930303436323739393536313130323736373739303139383733323231363535353335303438393732323331363035373830323938373220300A302031323834393437333133313436333330323537313135303434353536303334373630343633373630363435303735393830383234393032333430313334303632393238303334303338323735372030203020313338373239373137363833383430323733393537343732393932333131353335313636343238373235313935313630353337323730343832383835363237393935393138313939303737363520300A3020313634313933333839373936353738343038343432393439393239373738313432393037303635393434333138333237303137393034383034303536363536323234313930353032343335313320310A30203730363636323036373739303737363139313532343034313137333932313636333737323634353133343032393935393334323232323737333833383432303733343034393535373538313620300A\"}";
+	int is_right = is_prove_right(req);
 	printf("is_right=%d\n", is_right);
 	dur = (double)(clock() - start);
 	printf("Verify proof Use Time:%f\n\n",(dur/CLOCKS_PER_SEC));

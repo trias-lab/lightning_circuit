@@ -82,31 +82,31 @@ linear_combination<FieldT> packed_addition(pb_variable_array<FieldT> input) {
     ));
 }
 
-
-
+																																	
 template<typename FieldT>
-r1cs_primary_input<FieldT> l_input_map(const bit_vector &h1,
-                                       const bit_vector &h2,
-                                       const bit_vector &h3,
-                                       const bit_vector &h4,
+r1cs_primary_input<FieldT> l_input_map(const std::vector<bit_vector> &hash_input_vec,
+                                       const std::vector<bit_vector> &hash_output_vec,
                                        const bit_vector &x
 )
 {
-    // Construct the multipacked field points which encode
+	// Construct the multipacked field points which encode
     // the verifier's knowledge. This is the "dual" of the
     // multipacking gadget logic in the constructor.
-    assert(h1.size() == sha256_digest_len);
-    assert(h2.size() == sha256_digest_len);
-    assert(h3.size() == sha256_digest_len);
-	assert(h4.size() == sha256_digest_len);
-    assert(x.size() == sha256_digest_len);
-    std::cout << "**** After assert(size() == sha256_digest_len) *****" << std::endl;
+    for(size_t  i=0; i<hash_input_vec.size(); i++) {
+		assert(hash_input_vec[i].size() == sha256_digest_len);
+	}
+	for(size_t  i=0; i<hash_output_vec.size(); i++) {
+		assert(hash_output_vec[i].size() == sha256_digest_len);
+	}
+	std::cout << "**** After assert(size() == sha256_digest_len) *****" << std::endl;
 
     bit_vector input_as_bits;
-    input_as_bits.insert(input_as_bits.end(), h1.begin(), h1.end());
-    input_as_bits.insert(input_as_bits.end(), h2.begin(), h2.end());
-    input_as_bits.insert(input_as_bits.end(), h3.begin(), h3.end());
-	input_as_bits.insert(input_as_bits.end(), h4.begin(), h4.end());
+	for(size_t  i=0; i<hash_input_vec.size(); i++) {
+		input_as_bits.insert(input_as_bits.end(), hash_input_vec[i].begin(), hash_input_vec[i].end());
+	}
+	for(size_t  i=0; i<hash_output_vec.size(); i++) {
+		input_as_bits.insert(input_as_bits.end(), hash_output_vec[i].begin(), hash_output_vec[i].end());
+	}
     input_as_bits.insert(input_as_bits.end(), x.begin(), x.end());
     std::vector<FieldT> input_as_field_elements = pack_bit_vector_into_field_element_vector<FieldT>(input_as_bits);
 
@@ -114,8 +114,6 @@ r1cs_primary_input<FieldT> l_input_map(const bit_vector &h1,
 
     return input_as_field_elements;
 }
-
-
 
 
 #endif
