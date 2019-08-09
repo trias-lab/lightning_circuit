@@ -40,9 +40,13 @@ libMultiInput:
 	$(CXX) -o libzero_knowledge.so libzero_knowledge.o -shared $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
 
 libMultiInput_test:
-	$(CXX) -o libzero_knowledge.o src/libMultiInput/lib_zero_knowledge.cpp -c $(CXXFLAGS)
+	$(CXX) -DTEST_LIB_MULTI -o libzero_knowledge.o src/libMultiInput/lib_zero_knowledge.cpp -c $(CXXFLAGS)
 	$(CXX) -o libzero_knowledge libzero_knowledge.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)	
 
+libMultiInput_static:
+	$(CXX) -o libzero_knowledge.o src/libMultiInput/lib_zero_knowledge.cpp -c $(CXXFLAGS_STATIC)
+	ar rcs libzero_knowledge.a libzero_knowledge.o
+	
 zktrias:
 	$(CXX) -o zktrias.o src/zkTrias/zktrias.cpp -c $(CXXFLAGS)
 	$(CXX) -o zktrias zktrias.o $(CXXFLAGS) $(LDFLAGS) $(LDLIBS)
@@ -59,6 +63,15 @@ cp_static:
 	cp $(DEPSRC)/libsnark/libsnark.a ~/gopath/src/tribc/cpp_lib/
 	#cp /usr/lib/x86_64-linux-gnu/libgmp.a ~/gopath/src/tribc/cpp_lib/
 	#cp /usr/lib/x86_64-linux-gnu/libgmpxx.a ~/gopath/src/tribc/cpp_lib/
+
+cpMultiInput_static:
+	cp src/libMultiInput/lib_zero_knowledge.h ~/gopath/src/tribc/cpp_lib/
+	cp libzero_knowledge.a ~/gopath/src/tribc/cpp_lib/
+	cp $(DEPSRC)/libsnark/libsnark.a ~/gopath/src/tribc/cpp_lib/	
+
+cpKey:
+	cp pk ~/gopath/src/tribc/
+	cp vk ~/gopath/src/tribc/
 
 clean:
 	$(RM) *.o *.so *.a test zktrias libzero_knowledge	

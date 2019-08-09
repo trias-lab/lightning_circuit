@@ -12,12 +12,29 @@ extern "C" {
 //called once
 void init_setup();
 
-//r1 + r4 + x = r2 + r3
-char *get_prove_data(char *r1, char *r2, char *r3, char *r4, char *h1, char *h2, char *h3, char *h4, char *x);
+//input + x = output
+/*
+{
+	"input":["a0b0", "a0b0", ...],
+	"output":["a0b0", "a0b0"],
+	"input_hash":["abc", "def", ...],
+	"output_hash":["abc", "def"],
+	"x":"a0b0"
+}
+*/
+char *get_prove_data(const char *jsonReqest);
 
 
 //if right, return 1. else return 0
-int is_prove_right(char *h1, char *h2, char *h3, char *h4, char *x, char *prove_data);
+/*
+{
+	"input_hash":["abc", "def", ...],
+	"output_hash":["abc", "def"],
+	"x":"100000",
+	"prove_data":"aefefefe"
+}
+*/
+int is_prove_right(const char *jsonReqest);
 
 
 
