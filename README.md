@@ -36,9 +36,11 @@ Here are the requisite packages in some Linux distributions:
 
 ## Compile
 CURVE=ALT_BN128 ./get-libsnark
+								
 make libMultiInput_static
 ## Test
 make libMultiInput_test
+
 ./libzero_knowledge
 ## Copy static lib to go project 
 make cpMultiInput_static
