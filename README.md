@@ -35,15 +35,15 @@ Here are the requisite packages in some Linux distributions:
         sudo apt-get install build-essential cmake git libgmp3-dev libprocps3-dev python-markdown libboost-all-dev libssl-dev
 
 ## Compile
-``CURVE=ALT_BN128 ./get-libsnark``
-``make libMultiInput_static``
+CURVE=ALT_BN128 ./get-libsnark
+make libMultiInput_static
 ## Test
-``make libMultiInput_test``
-``./libzero_knowledge``
+make libMultiInput_test
+./libzero_knowledge
 ## Copy static lib to go project 
-``make cpMultiInput_static``
+make cpMultiInput_static
 ## Copy prove data files to go project 
-``make cpKey``
+make cpKey
 
 ## Anatomy
 
