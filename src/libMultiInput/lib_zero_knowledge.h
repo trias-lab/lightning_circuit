@@ -10,7 +10,8 @@ extern "C" {
 #endif
 
 //called once
-void init_setup();
+void init_setup(const char *pkPath, const char *vkPath);
+
 
 //input + x = output
 /*

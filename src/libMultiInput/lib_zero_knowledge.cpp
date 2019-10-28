@@ -9,8 +9,8 @@
 #include "snark.hpp"
 #include "lib_zero_knowledge.h"
 
-#define VK_PATH "./vk"
-#define PK_PATH "./pk"
+//#define VK_PATH "/trias/log/vk"
+//#define PK_PATH "/trias/log/pk"
 
 
 
@@ -89,58 +89,66 @@ static void write_debug(vector<bool> &h1_bv, vector<bool> &h2_bv, vector<bool> &
 }
 */
 
-static bool file_exist (const std::string& name) {
-	ifstream f(name.c_str());
+static bool file_exist (const char * name) {
+	ifstream f(name);
 	return f.good();
 }
 
 
 
 //called once
-void init_setup()
+void init_setup(const char *pkPath, const char *vkPath)
 {
 	int jw_neg[2][32];
 
 	// Initialize the curve parameters.
     default_r1cs_ppzksnark_pp::init_public_params();
 
+	std::cout << "init_setup, pkPath " << pkPath << ", vkPath " << vkPath << endl; 
 	bool need_gen = true;	
-	if (file_exist(PK_PATH) && file_exist(VK_PATH)) { //only read 
+	if (file_exist(pkPath) && file_exist(vkPath)) { //only read 
 		need_gen = false;
 	} 
-	
+
+
 	if (need_gen) {
+		std::cout << "can not find pk&vk, please check file exist, " << pkPath << ", " << vkPath << endl;
+		return;
+		/*
 		//generate key
 		auto keypair = generate_keypair_neg<default_r1cs_ppzksnark_pp>(jw_neg);
 		//pk
 		stringstream provingKey;
 		provingKey << keypair.pk;
 		ofstream pkOf;
-		pkOf.open(PK_PATH);
+		pkOf.open(pkPath);
 		pkOf << provingKey.rdbuf();
 		pkOf.close();
 		//vk
 		ofstream vkOf;
 		stringstream verificationKey;
     	verificationKey << keypair.vk;
-    	vkOf.open(VK_PATH);
+    	vkOf.open(vkPath);
     	vkOf << verificationKey.rdbuf();
     	vkOf.close();
+    	*/
 	}
+	
 	
 	//read
 	ifstream vkIf, pkIf; 
-	pkIf.open(PK_PATH); 
+	pkIf.open(pkPath); 
     stringstream provingKeyFromFile;
 	provingKeyFromFile << pkIf.rdbuf();
 	pkIf.close();
 	provingKeyFromFile >> proving_key;
 
-    vkIf.open(VK_PATH);  
+    vkIf.open(vkPath);  
     stringstream verifycationKeyFromFile;
     verifycationKeyFromFile << vkIf.rdbuf();
     vkIf.close();
     verifycationKeyFromFile >> verifycation_key;
+	return;
 }
 
 
@@ -559,7 +567,7 @@ int main(int argc, char *argv[])
 	//init
     double dur;
     clock_t start = clock();
-	init_setup();
+	init_setup("/8lab/log/pk", "/8lab/log/vk");
 	dur = (double)(clock() - start);
     printf("Generate&Load keypair Use Time:%f\n\n",(dur/CLOCKS_PER_SEC));
 
