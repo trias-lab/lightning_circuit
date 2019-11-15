@@ -214,6 +214,32 @@ public:
                     right_side
             ));
         }
+
+        {
+        	linear_combination<FieldT> high_bits_number;
+			const int high_bits = 10;
+			for(int i=0; i<MAX_INPUT_NUMBER; i++) {
+				for(int j=256-high_bits; j<256; j++) {
+					high_bits_number = high_bits_number +  intermediate_input_val[i][j];
+				}
+			}
+			for(int j=256-high_bits; j<256; j++) {
+				high_bits_number = high_bits_number +  intermediate_x_val[j];
+			}
+			for(int i=0; i<MAX_OUTPUT_NUMBER; i++) {
+				for(int j=256-high_bits; j<256; j++) {
+					high_bits_number = high_bits_number +  intermediate_output_val[i][j];
+				}
+			}
+			linear_combination<FieldT> zero;
+    		zero.add_term(pb_variable<FieldT>(0), 0);
+			this->pb.add_r1cs_constraint(r1cs_constraint<FieldT>(
+                    1,
+                    high_bits_number,
+                    zero
+            ));
+        }
+		
         /*
         //R1+x=R2+R3
         for (unsigned int i = 31; i > 0 ; i--) { //不对最高byte进行检查
