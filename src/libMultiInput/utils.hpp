@@ -77,9 +77,27 @@ linear_combination<FieldT> packed_addition(pb_variable_array<FieldT> input) {
     //return pb_packing_sum<FieldT>(pb_variable_array<FieldT>(
     //      input_swapped.rbegin(), input_swapped.rend()
     //));
+
+	/*
     return pb_packing_sum<FieldT>(pb_variable_array<FieldT>(
             input.rbegin(), input.rend()
     ));
+    */
+
+	pb_variable_array<FieldT> array(input.rbegin(), input.rend());
+    pb_linear_combination_array<FieldT> v(array);
+    FieldT twoi = FieldT::one(); // will hold 2^i entering each iteration
+    std::vector<linear_term<FieldT> > all_terms;
+    for (auto &lc : v)
+    {
+        for (auto &term : lc.terms)
+        {
+            all_terms.emplace_back(twoi * term);
+        }
+        twoi += twoi;
+    }
+
+    return linear_combination<FieldT>(all_terms);
 }
 
 																																	
