@@ -70,8 +70,9 @@ cpMultiInput_static:
 	cp $(DEPSRC)/libsnark/libsnark.a ~/gopath/src/tribc/cpp_lib/	
 
 cpKey:
-	cp pk ~/gopath/src/tribc/
-	cp vk ~/gopath/src/tribc/
+	mkdir -p /8lab/log/
+	cp ./pk /8lab/log/
+	cp ./vk /8lab/log/
 
 clean:
 	$(RM) *.o *.so *.a test zktrias libzero_knowledge	
